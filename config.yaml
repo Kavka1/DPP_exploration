@@ -1,0 +1,20 @@
+env_config:
+  env_name: 'Ant-v2'
+  max_episode_length: 1000
+
+  model_config:
+  policy_hidden_layers:
+    - 128
+    - 128
+  value_hidden_layers:
+    - 128
+    - 128
+  action_std: 0.1
+
+lr: 0.005
+gamma: 0.995
+rho: 0.001
+num_agents: 4
+buffer_size: 1000000
+batch_size: 256
+device: 'cpu'
