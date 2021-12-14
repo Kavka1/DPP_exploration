@@ -53,7 +53,7 @@ class Policy_MLP(MLP):
         return mean
     
     def load_model(self, path: str) -> None:
-        self.model.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(path))
 
 
 class QFunction(MLP):

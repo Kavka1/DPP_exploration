@@ -82,46 +82,49 @@ class Master(object):
 
     def train(self) -> None:
         log_q_value, log_loss_q = 0, 0
-        for i in range(self.num_agents):
-            obs_batch, a_batch, r_batch, done_batch, next_obs_batch = self.buffer.sample(self.batch_size)
         
-            obs_batch = torch.from_numpy(obs_batch).float().to(self.device)
-            a_batch = torch.from_numpy(a_batch).float().to(self.device)
-            r_batch = torch.from_numpy(r_batch).float().to(self.device).unsqueeze(dim=-1)
-            done_batch = torch.from_numpy(done_batch).int().to(self.device).unsqueeze(dim=-1)
-            next_obs_batch = torch.from_numpy(next_obs_batch).float().to(self.device)
+        obs_batch, a_batch, r_batch, done_batch, next_obs_batch = self.buffer.sample(self.batch_size)
+        obs_batch = torch.from_numpy(obs_batch).float().to(self.device)
+        a_batch = torch.from_numpy(a_batch).float().to(self.device)
+        r_batch = torch.from_numpy(r_batch).float().to(self.device).unsqueeze(dim=-1)
+        done_batch = torch.from_numpy(done_batch).int().to(self.device).unsqueeze(dim=-1)
+        next_obs_batch = torch.from_numpy(next_obs_batch).float().to(self.device)
 
-            with torch.no_grad():
-                next_action_tar_batch = self.policies_tar[i].batch_forward(next_obs_batch)
-                q1_next_tar = self.q1_tar(next_obs_batch, next_action_tar_batch)
-                q2_next_tar = self.q2_tar(next_obs_batch, next_action_tar_batch)
-                q_tar = torch.min(q1_next_tar, q2_next_tar)
-            
-            q_update_target = r_batch + (1 - done_batch) * self.gamma * q_tar
-            q1_update_eval = self.q1(obs_batch, a_batch)
-            q2_update_eval = self.q2(obs_batch, a_batch)
-            loss_q = F.mse_loss(q1_update_eval, q_update_target) + F.mse_loss(q2_update_eval, q_update_target)
-            
-            log_q_value += q1_update_eval.mean().item() + q2_update_eval.mean().item()
-            log_loss_q += loss_q.item()
+        with torch.no_grad():
+            next_action_tar_batch = self.policies_tar[0].batch_forward(next_obs_batch)
+            q1_next_tar = self.q1_tar(next_obs_batch, next_action_tar_batch)
+            q2_next_tar = self.q2_tar(next_obs_batch, next_action_tar_batch)
+            q_tar = torch.min(q1_next_tar, q2_next_tar)
+        
+        q_update_target = r_batch + (1 - done_batch) * self.gamma * q_tar
+        q1_update_eval = self.q1(obs_batch, a_batch)
+        q2_update_eval = self.q2(obs_batch, a_batch)
+        loss_q = F.mse_loss(q1_update_eval, q_update_target) + F.mse_loss(q2_update_eval, q_update_target)
+        
+        self.optimizer_q.zero_grad()
+        loss_q.backward()
+        self.optimizer_q.step()
 
-            self.optimizer_q.zero_grad()
-            loss_q.backward()
-            self.optimizer_q.step()
-            
-            if self.train_count % self.train_policy_delay == 0:            
+        log_q_value += q1_update_eval.mean().item() + q2_update_eval.mean().item()
+        log_loss_q += loss_q.item()
+        
+        if self.train_count % self.train_policy_delay == 0:          
+            loss_policy = 0          
+            for i in range(self.num_agents):
                 new_action = self.policies[i].batch_forward(obs_batch)
-                loss_policy = - self.q1(obs_batch, new_action).mean()
-                
-                self.optimizer_policy.zero_grad()
-                loss_policy.backward()
-                self.optimizer_policy.step()
+                loss_policy += - self.q1(obs_batch, new_action).mean()
 
+            self.optimizer_policy.zero_grad()
+            loss_policy.backward()
+            self.optimizer_policy.step()
+    
+            for i in range(self.num_agents):
                 soft_update(self.policies[i], self.policies_tar[i], self.rho)
 
-            soft_update(self.q1, self.q1_tar, self.rho)
-            soft_update(self.q2, self.q2_tar, self.rho)
-            self.train_count += 1
+        soft_update(self.q1, self.q1_tar, self.rho)
+        soft_update(self.q2, self.q2_tar, self.rho)
+        
+        self.train_count += 1
 
         return log_q_value/self.num_agents, log_loss_q/self.num_agents
 
