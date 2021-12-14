@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple, Type
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.distributions import Normal
 
 
 class MLP(nn.Module):
@@ -15,7 +16,7 @@ class MLP(nn.Module):
         for i in range(1, len(self.layers)):
             self.model += [nn.Linear(last_layer, self.layers[i]), nn.Tanh()]
             last_layer = self.layers[i]
-        self.model = nn.Sequential(self.model)
+        self.model = nn.Sequential(*self.model)
 
 
 class Policy_MLP(MLP):
@@ -28,18 +29,32 @@ class Policy_MLP(MLP):
         self.device = device
 
         self.layers = [self.in_dim] + self.hidden_layers + [self.out_dim]
-        
-        super.__init__()
+        super().__init__()
 
-    def forward(self, obs: np.array) -> np.array:
+        self.action_std = torch.ones(self.out_dim) * self.std
+
+    def act(self, obs: np.array) -> np.array:
         obs = torch.from_numpy(obs).float().to(self.device)
-        mean = self.model(obs).numpy()
-        action = np.clip(mean, self.a_low, self.a_high)
-        return action
+        with torch.no_grad():
+            mean = self.model(obs)
+        dist = Normal(mean, self.std)
+        action = dist.sample()
+        action = torch.clamp(action, self.a_low, self.a_high)
+        return action.cpu().detach().numpy()
+
+    def act_wo_noise(self, obs: np.array) -> np.array:
+        obs = torch.from_numpy(obs).float().to(self.device)
+        with torch.no_grad():
+            action = self.model(obs)
+        return action.cpu().detach().numpy()
 
     def batch_forward(self, obs: torch.tensor) -> torch.tensor:
-        return self.model(obs)
+        mean = self.model(obs)
+        return mean
     
+    def load_model(self, path: str) -> None:
+        self.model.load_state_dict(torch.load(path))
+
 
 class QFunction(MLP):
     def __init__(self, model_config: Dict, device: torch.device) -> None:
@@ -53,6 +68,6 @@ class QFunction(MLP):
         super().__init__()
 
     def forward(self, obs: torch.tensor, action: torch.tensor) -> torch.tensor:
-        x = torch.concat([obs, action], dim=-1)
+        x = torch.cat([obs, action], dim=-1)
         q_value = self.model(x)
         return q_value

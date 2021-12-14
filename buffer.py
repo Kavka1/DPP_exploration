@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple
 import collections
+import numpy as np
 import random
 
 
@@ -16,6 +17,8 @@ class Buffer(object):
         for item in trans_batch:
             self.push(item)
 
-    def sample(self, batch_size: int) -> List[Tuple, Tuple, Tuple, Tuple]:
+    def sample(self, batch_size: int) -> List[Tuple]:
         data = random.sample(self.buffer, batch_size)
-        return list(zip(*data))
+        obs, a, r, done, obs_ = zip(*data)
+        obs, a, r, done, obs_ = np.stack(obs, axis=0), np.stack(a, axis=0), np.array(r), np.array(done), np.stack(obs_, axis=0)
+        return obs, a, r, done, obs_
