@@ -24,7 +24,9 @@ class Master(object):
         self.gamma = config['gamma']
         self.rho = config['rho']
         self.train_policy_delay = config['train_policy_delay']
-        
+        self.noise_std = config['noise_std']
+        self.noise_clip = config['noise_clip']
+
         self.num_agents = config['num_agents']
         self.buffer_size = config['buffer_size']
         self.batch_size = config['batch_size']
@@ -92,6 +94,8 @@ class Master(object):
 
         with torch.no_grad():
             next_action_tar_batch = self.policies_tar[0].batch_forward(next_obs_batch)
+            noise = torch.clamp(torch.randn_like(next_action_tar_batch).to(self.device) * self.noise_std, - self.noise_clip, self.noise_clip)
+            next_action_tar_batch = next_action_tar_batch + noise
             q1_next_tar = self.q1_tar(next_obs_batch, next_action_tar_batch)
             q2_next_tar = self.q2_tar(next_obs_batch, next_action_tar_batch)
             q_tar = torch.min(q1_next_tar, q2_next_tar)
@@ -123,7 +127,7 @@ class Master(object):
 
         soft_update(self.q1, self.q1_tar, self.rho)
         soft_update(self.q2, self.q2_tar, self.rho)
-        
+
         self.train_count += 1
 
         return log_q_value/self.num_agents, log_loss_q/self.num_agents

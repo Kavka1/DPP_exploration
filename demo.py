@@ -24,12 +24,12 @@ def load_exp():
 
 def demo():
     config = load_exp()
-    policy = Policy_MLP(config['model_config'], device=torch.device(config['device']))
+    policy = Policy_MLP(config['model_config'], device=torch.device('cpu'))
     env = Env_wrapper(config['env_config'])
 
     for i_episode in range(50):
         for i in range(config['num_agents']):
-            policy.load_model(config['exp_path'] + f'models/mdoel_{i}_best')
+            policy.load_model(config['exp_path'] + f'models/model_{i}_best')
             reward, step = 0, 0
             done = False
             obs = env.reset()
