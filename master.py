@@ -108,6 +108,7 @@ class Master(object):
         obs_batch, a_batch, r_batch, done_batch, next_obs_batch = self.buffer.sample(self.batch_size)
 
         self.obs_filter.push_batch(obs_batch)
+        obs_batch, next_obs_batch = self.obs_filter(obs_batch), self.obs_filter(next_obs_batch)
 
         obs_batch = torch.from_numpy(obs_batch).float().to(self.device)
         a_batch = torch.from_numpy(a_batch).float().to(self.device)

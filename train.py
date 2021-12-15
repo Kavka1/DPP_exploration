@@ -31,7 +31,8 @@ def train():
         a_seq, r_seq, done_seq, next_obs_seq, info_seq = [], [], [], [], []
         
         for i in range(config['num_agents']):
-            action = master.policies[i].act(master.obs_filter(obs_seq[i]))
+            obs = master.obs_filter(obs_seq[i])
+            action = master.policies[i].act(obs)
             master.parents_conn[i].send(action)
             a_seq.append(action)
 
