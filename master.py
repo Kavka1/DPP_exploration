@@ -10,7 +10,7 @@ from env import Env_wrapper
 from buffer import Buffer
 from worker import Worker
 from model import Policy_MLP, QFunction
-from utils import check_path, soft_update, hard_update
+from utils import MeanStdFilter, check_path, soft_update, hard_update
 
 
 class Master(object):
@@ -26,6 +26,7 @@ class Master(object):
         self.train_policy_delay = config['train_policy_delay']
         self.noise_std = config['noise_std']
         self.noise_clip = config['noise_clip']
+        self.diversity_importance = config['diversity_importance']
 
         self.num_agents = config['num_agents']
         self.buffer_size = config['buffer_size']
@@ -41,6 +42,8 @@ class Master(object):
         self.init_policies()
         self.init_workers()
         self.init_optimizer()
+        self.init_obs_filter()
+        self.init_logger_value()
         
     def init_buffer(self) -> None:
         self.buffer = Buffer(self.buffer_size)
@@ -82,10 +85,30 @@ class Master(object):
         self.optimizer_policy = optim.Adam([{'params': policy.parameters()} for policy in self.policies], self.learning_rate)
         self.optimizer_q = optim.Adam([{'params': self.q1.parameters()}, {'params': self.q2.parameters()}], self.learning_rate)
 
+    def init_obs_filter(self) -> None:
+        self.obs_filter = MeanStdFilter(shape=self.model_config['o_dim'])
+
+    def init_logger_value(self) -> None:
+        self.log_q_value = 0
+        self.log_q_loss = 0
+        self.log_policy_loss = 0
+        self.log_diversity_loss = 0
+
+    def adapt_div_importance(self, loss_policy, loss_diverse) -> None:
+        if loss_policy > 0.1 * loss_diverse:
+            self.diversity_importance *= 1.5
+        else:
+            self.diversity_importance *= 0.75
+        
+        self.diversity_importance = max(min(self.diversity_importance, 0.2), 0.05)
+
     def train(self) -> None:
-        log_q_value, log_loss_q = 0, 0
+        self.log_q_value, self.log_q_loss = 0, 0
         
         obs_batch, a_batch, r_batch, done_batch, next_obs_batch = self.buffer.sample(self.batch_size)
+
+        self.obs_filter.push_batch(obs_batch)
+
         obs_batch = torch.from_numpy(obs_batch).float().to(self.device)
         a_batch = torch.from_numpy(a_batch).float().to(self.device)
         r_batch = torch.from_numpy(r_batch).float().to(self.device).unsqueeze(dim=-1)
@@ -109,15 +132,23 @@ class Master(object):
         loss_q.backward()
         self.optimizer_q.step()
 
-        log_q_value += q1_update_eval.mean().item() + q2_update_eval.mean().item()
-        log_loss_q += loss_q.item()
+        self.log_q_value += q1_update_eval.mean().item() + q2_update_eval.mean().item()
+        self.log_q_loss += loss_q.item()
         
         if self.train_count % self.train_policy_delay == 0:          
-            loss_policy = 0          
+            loss_policy = 0
+            pop_action_batch = []
             for i in range(self.num_agents):
                 new_action = self.policies[i].batch_forward(obs_batch)
                 loss_policy += - self.q1(obs_batch, new_action).mean()
+                pop_action_batch.append(new_action)
 
+            diversity_loss = self.compute_diversity_loss(pop_action_batch)
+
+            self.log_policy_loss = loss_policy.item()
+            self.log_diversity_loss = diversity_loss.item()
+
+            loss_policy += self.diversity_importance * diversity_loss
             self.optimizer_policy.zero_grad()
             loss_policy.backward()
             self.optimizer_policy.step()
@@ -130,10 +161,25 @@ class Master(object):
 
         self.train_count += 1
 
-        return log_q_value/self.num_agents, log_loss_q/self.num_agents
+        return self.log_q_value/2, self.log_q_loss/2, self.log_policy_loss, self.log_diversity_loss
+
+    def compute_diversity_loss(self, pop_action_batch: List[torch.tensor]) -> torch.tensor:
+        action_embedding = [action.flatten() for action in pop_action_batch]
+        embedding = torch.stack(action_embedding, dim=0)
+        left = embedding.unsqueeze(0).expand(embedding.size(0), -1, -1)
+        right = embedding.unsqueeze(1).expand(-1, embedding.size(0), -1)
+        matrix = torch.exp(-torch.square(left - right)).sum(-1) / (2)
+        return - torch.logdet(matrix)
 
     def save_policy(self, remark: str, policy_id: int) -> None:
         model_path = self.exp_path + 'models/'
         check_path(model_path)
         torch.save(self.policies[policy_id].state_dict(), model_path+f'model_{policy_id}_{remark}')
         print(f"-------Models {policy_id} saved to {model_path}-------")
+
+    def save_filter(self, remark: str) -> None:
+        filter_path = self.exp_path + 'filters/'
+        check_path(filter_path)
+        filter_params = np.array([self.obs_filter.mean, self.obs_filter.square_sum, self.obs_filter.count])
+        np.save(filter_path + remark, filter_params)
+        print(f"-------Filter params saved to {filter_path}-------")

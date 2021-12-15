@@ -13,10 +13,9 @@ class MLP(nn.Module):
 
     def create_layers(self) -> None:
         last_layer = self.layers[0]
-        for i in range(1, len(self.layers)):
-            self.model += [nn.Linear(last_layer, self.layers[i]), nn.Tanh()]
+        for i in range(1, len(self.layers)-1):
+            self.model += [nn.Linear(last_layer, self.layers[i]), nn.ReLU()]
             last_layer = self.layers[i]
-        self.model = nn.Sequential(*self.model)
 
 
 class Policy_MLP(MLP):
@@ -30,6 +29,8 @@ class Policy_MLP(MLP):
 
         self.layers = [self.in_dim] + self.hidden_layers + [self.out_dim]
         super().__init__()
+        self.model += [nn.Linear(self.layers[-2], self.layers[-1]), nn.Tanh()]
+        self.model = nn.Sequential(*self.model)
 
         self.action_std = torch.ones(self.out_dim) * self.std
 
@@ -54,6 +55,7 @@ class Policy_MLP(MLP):
     
     def load_model(self, path: str) -> None:
         self.load_state_dict(torch.load(path))
+        print(f"--------- Loaded model from {path} -----------")
 
 
 class QFunction(MLP):
@@ -66,6 +68,8 @@ class QFunction(MLP):
         self.layers = [self.in_dim] + self.hidden_layers + [self.out_dim]
 
         super().__init__()
+        self.model += [nn.Linear(self.layers[-2], self.layers[-1])]
+        self.model = nn.Sequential(*self.model)
 
     def forward(self, obs: torch.tensor, action: torch.tensor) -> torch.tensor:
         x = torch.cat([obs, action], dim=-1)
