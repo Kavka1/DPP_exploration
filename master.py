@@ -108,7 +108,7 @@ class Master(object):
         obs_batch, a_batch, r_batch, done_batch, next_obs_batch = self.buffer.sample(self.batch_size)
 
         self.obs_filter.push_batch(obs_batch)
-        obs_batch, next_obs_batch = self.obs_filter(obs_batch), self.obs_filter(next_obs_batch)
+        obs_batch, next_obs_batch = self.obs_filter.trans_batch(obs_batch), self.obs_filter.trans_batch(next_obs_batch)
 
         obs_batch = torch.from_numpy(obs_batch).float().to(self.device)
         a_batch = torch.from_numpy(a_batch).float().to(self.device)
@@ -169,7 +169,7 @@ class Master(object):
         embedding = torch.stack(action_embedding, dim=0)
         left = embedding.unsqueeze(0).expand(embedding.size(0), -1, -1)
         right = embedding.unsqueeze(1).expand(-1, embedding.size(0), -1)
-        matrix = torch.exp(-torch.square(left - right)).sum(-1) / (2)
+        matrix = torch.exp( - torch.square(left - right)).sum(-1) / 2
         return - torch.logdet(matrix)
 
     def save_policy(self, remark: str, policy_id: int) -> None:

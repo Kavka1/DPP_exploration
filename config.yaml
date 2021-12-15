@@ -1,12 +1,12 @@
 env_config:
-  env_name: 'Swimmer'
+  env_name: 'Hopper-v2'
   max_episode_step: 1000
   env_seed: 10
 
 model_config:
   policy_hidden_layers:
-    - 64
-    - 64
+    - 128
+    - 128
   value_hidden_layers:
     - 128
     - 128
@@ -21,7 +21,7 @@ buffer_size: 1000000
 batch_size: 256
 device: 'cpu'
 results_path: '/home/xukang/GitRepo/DPP_exploration/results/'
-max_timestep: 1500000
+max_timestep: 1000000
 start_training_step: 2000
 train_policy_delay: 2
 save_interval: 100

@@ -93,6 +93,11 @@ class MeanStdFilter(object):
         assert x.shape[0] == self.shape, (f"Filter.__call__: x.shape-{x.shape} != filter.shape-{self.shape}")
         return (x - self.rs._mean) / (self.rs.std + 1e-6)
 
+    def trans_batch(self, x_batch: np.array) -> np.array:
+        for i in range(len(x_batch)):
+            x_batch[i] = (x_batch[i] - self.rs._mean) / (self.rs.std + 1e-6)
+        return x_batch
+
     def push_batch(self, x_batch: np.array) -> None:
         assert len(x_batch.shape) == 2 and x_batch[0].shape[0] == self.shape
         for x in x_batch:

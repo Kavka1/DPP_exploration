@@ -19,7 +19,7 @@ class Env_wrapper(object):
             self.env = SwimmerEnv('/home/xukang/GitRepo/DPP_exploration/assets/swimmer.xml', 4)
         elif self.env_name == 'SwimmerMR':
             self.env = SwimmerMultiRewardEnv('/home/xukang/GitRepo/DPP_exploration/assets/swimmer.xml', 4)
-        elif self.env_name == ['Swimmer-v2', 'HalfCheetah-v2', 'Hopper-v2', 'Walker2d-v2']:
+        elif self.env_name in ['Swimmer-v2', 'HalfCheetah-v2', 'Hopper-v2', 'Walker2d-v2']:
             self.env = gym.make(self.env_name)
         else:
             raise ValueError(f'Env name illegal, no cressponding named {self.env_name}')
