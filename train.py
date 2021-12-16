@@ -75,6 +75,9 @@ def train():
         logger.add_scalar('Train/policy_loss', log_policy_loss, step)
         logger.add_scalar('Train/diversity_loss', log_diversity_loss, step)
 
+    for worker in master.workers:
+        worker.terminate()
+
 
 if __name__ == '__main__':
     train()

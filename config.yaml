@@ -1,5 +1,5 @@
 env_config:
-  env_name: 'Hopper-v2'
+  env_name: 'Ant-v2'
   max_episode_step: 1000
   env_seed: 10
 
@@ -21,7 +21,7 @@ buffer_size: 1000000
 batch_size: 256
 device: 'cpu'
 results_path: '/home/xukang/GitRepo/DPP_exploration/results/'
-max_timestep: 1000000
+max_timestep: 800000
 start_training_step: 2000
 train_policy_delay: 2
 save_interval: 100
@@ -29,4 +29,4 @@ save_interval: 100
 noise_std: 0.2
 noise_clip: 0.5
 
-diversity_importance: 0
+diversity_importance: 0.2
