@@ -88,10 +88,18 @@ if __name__ == '__main__':
         ],
         'Walker': [
             '/home/xukang/GitRepo/DPP_exploration/results/Walker2d-v2_12-16_00-26/',
-            '/home/xukang/GitRepo/DPP_exploration/results/Walker2d-v2_12-16_00-26/',
+            '/home/xukang/GitRepo/DPP_exploration/results/Walker2d-v2_12-16_15-18/',
             False,
             False,
             'Walker-v2',
+            15
+        ],
+        'Ant': [
+            '/home/xukang/GitRepo/DPP_exploration/results/Ant-v2_12-16_22-32/',
+            '/home/xukang/GitRepo/DPP_exploration/results/Ant-v2_12-16_22-36/',
+            False,
+            False,
+            'Ant-v2',
             15
         ]
     }

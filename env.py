@@ -102,7 +102,7 @@ class SwimmerMultiRewardEnv(MujocoEnv, EzPickle):
         reward = reward_x_fwd + reward_y_up + reward_ctrl
         
         ob = self._get_obs()
-        return ob, reward, False, dict(reward_fwd=reward_fwd, reward_up=reward_y_up, reward_ctrl=reward_ctrl)
+        return ob, reward, False, dict(reward_fwd=reward_x_fwd, reward_up=reward_y_up, reward_ctrl=reward_ctrl)
 
     def _get_obs(self):
         qpos = self.sim.data.qpos
