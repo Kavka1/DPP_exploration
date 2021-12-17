@@ -38,7 +38,7 @@ def refine_model_config(config: Dict) -> Dict:
 
 
 def create_exp_path(config: Dict) -> Dict:
-    exp_name = f"{config['env_config']['env_name']}_{datetime.datetime.now().strftime('%m-%d_%H-%M')}"
+    exp_name = f"{config['env_config']['env_name']}_delay-{config['env_config']['delay_reward']}_{datetime.datetime.now().strftime('%m-%d_%H-%M')}"
     exp_path = config['results_path'] + exp_name + '/'
     check_path(exp_path)
     config.update({'exp_path': exp_path})

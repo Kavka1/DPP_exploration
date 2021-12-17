@@ -13,7 +13,14 @@ class Env_wrapper(object):
         self.env_name = env_config['env_name']
         self._max_episode_step = env_config['max_episode_step']
         self.seed = env_config['env_seed']
+
+        if 'delay_reward' in env_config.keys():
+            self.delaye_reward = env_config['delay_reward']
+        else:
+            self.delaye_reward = False
+
         self._elapsed_step = 0
+        self.episode_reward = 0
 
         if self.env_name == 'Swimmer':
             self.env = SwimmerEnv('/home/xukang/GitRepo/DPP_exploration/assets/swimmer.xml', 4)
@@ -28,13 +35,23 @@ class Env_wrapper(object):
 
     def step(self, action: np.array) -> Tuple[np.array, float, bool, Dict]:
         obs, r, done, info = self.env.step(action)
+        
+        self.episode_reward += r
         self._elapsed_step += 1
+        
+        if self.delaye_reward:
+            r = 0
+
         if self._elapsed_step >= self._max_episode_step:
             done = True
+            if self.episode_reward:
+                r = self.episode_reward
+
         return obs, r, done, info
 
     def reset(self) -> np.array:
         self._elapsed_step = 0
+        self.episode_reward = 0
         return self.env.reset()
 
     def render(self) -> None:

@@ -1,7 +1,8 @@
 env_config:
-  env_name: 'Ant-v2'
-  max_episode_step: 1000
+  env_name: 'Swimmer-v2'
+  max_episode_step: 500
   env_seed: 10
+  delay_reward: True
 
 model_config:
   policy_hidden_layers:
@@ -29,4 +30,4 @@ save_interval: 100
 noise_std: 0.2
 noise_clip: 0.5
 
-diversity_importance: 0.2
+diversity_importance: 0.4
